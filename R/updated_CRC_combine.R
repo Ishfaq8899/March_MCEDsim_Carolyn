@@ -287,6 +287,7 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
                             surv_param_table,
                             pairs_table = NULL) {
 
+
   # Pull merged MCED+CRC cohort
   combined_first_results=merged_CRC_MCED_results$joined_data
 
@@ -306,7 +307,6 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
   combined_additional_results <- bind_rows(merged_CRC_MCED_results$combined_additional_results,
                                            merged_CRC_MCED_results$excess_cancers)
 
-
   # Keep only cancers that could be clinically diagnosed before OC death
   # If there are any additional/excess cancers eligible for reassignment, proceed
   combined_additional_results <- combined_additional_results %>% filter(clinical_diagnosis_time <= other_cause_death_time)
@@ -320,6 +320,8 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
   # If there are cancers to reassign, run matching & reassignment
   if(at_least_one_additional_result){
 
+
+    #   set.seed(12345)
     # Simulate cancer-specific deaths for additional cancers
     addtl_cancer_deaths=mapply(
       FUN="sim_cancer_deaths_screen_no_screen",
@@ -350,12 +352,19 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
     #prepare cancers to reassign and unaffected individuals tables
 
     # cancers_to_reassign: all additional/excess cancers that need to be assigned to unaffected people
-    cancers_to_reassign <- combined_additional_results %>%
-      mutate(treat = 1L, row_id = paste0("T_", row_number()))
+   cancers_to_reassign <- combined_additional_results %>%
+     mutate(treat = 1L, row_id = paste0("T_", row_number()))
 
     # unaffected_people: individuals with no primary cancer (available for matching)
     unaffected_people <- no_primary_cancer %>%
       mutate(treat = 0L, row_id = paste0("C_", row_number()))
+
+#  Use actual ID instead of row_number()
+#    cancers_to_reassign <- combined_additional_results %>%
+#      mutate(treat = 1L, row_id = paste0("T_", ID))
+
+#    unaffected_people <- no_primary_cancer %>%
+#      mutate(treat = 0L, row_id = paste0("C_", ID))
 
     # ================================
     # Reassignment using MatchIt
@@ -372,7 +381,8 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
       # Combine both groups for matching algorithm
       combined_for_matching <- bind_rows(cancers_to_reassign, unaffected_people)
 
-      # Run matching: 1-to-1, without replacement
+
+        # Run matching: 1-to-1, without replacement
       m.out <- matchit( treat ~ other_cause_death_time,
                         data    = combined_for_matching,
                         method  = "nearest",
@@ -397,7 +407,6 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
         inner_join(matched_unaffected %>% rename(unaffected_id = row_id) %>% select(subclass, unaffected_id, unaffected_original_ID = ID),
                    by = "subclass")
 
-
     }
     if (nrow(pairs) > 0) {
 
@@ -408,6 +417,9 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
         mutate( ID = ID_new,sex = sex_new, other_cause_death_time = death_time_new,
                 age_OC_death_cat = cut(death_time_new, breaks = seq(0,150,by=5))) %>%
         select(-treat, -row_id, -unaffected_id, -ID_new, -sex_new, -death_time_new)
+
+#  select(-treat, -row_id, -unaffected_id, -ID_new, -sex_new, -death_time_new,
+#         -cancer_original_ID, -unaffected_original_ID, -subclass)
 
       # Add reassigned cancers to the primary cancer dataset
       primary_cancer <- bind_rows(primary_cancer, reassigned_cancers)
@@ -432,8 +444,8 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
 
   #rowser()
 
-#  return(list( combined_results = combined_results, pairs = pairs))
-#}
+  #  return(list( combined_results = combined_results, pairs = pairs))
+  #}
 
   end_time <- ending_age
 

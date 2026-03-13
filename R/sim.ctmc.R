@@ -164,6 +164,19 @@ observed.data.hmm <- function(obs.times, underlying.states, emission.matrix) {
   return(out)
 }
 
+
+# function for make_ctmc_seed
+make_ctmc_seed <- function(ID, cancer_site) {
+  site_index <- match(cancer_site,c("Anus", "Bladder", "Esophagus", "Gastric", "Headandneck",
+                                    "Liver", "Lung", "Lymphoma", "Ovary", "Pancreas", "Renal", "Uterine"))
+
+  if (is.na(site_index)) {
+    stop("Unknown cancer_site: ", cancer_site)
+  }
+
+  as.integer(ID * 100 + site_index)
+}
+
 #############################################################################################################
 # This function obtains simulated data from an HMM at discrete observation times for a single individual
 # INPUTS: rate.matrix=transition intensity matrix for underlying states, emission.matrix=emissin matrix for observed states
@@ -192,10 +205,9 @@ observed.data.hmm <- function(obs.times, underlying.states, emission.matrix) {
 #' obs_data_individual <- gets.obs.data.individual(ID = 1, rate.matrix = rate_matrix, emission.matrix = emission_matrix)
 #'
 #' @export
-
 get.obs.data.individual <- function(ID, rate.matrix, emission.matrix,
-                                    obs.times = seq(1, 30, 2), end.time = 30,
-                                    start.time = 0, start.state = 1) {
+                                      obs.times = seq(1, 30, 2), end.time = 30,
+                                      start.time = 0, start.state = 1, cancer_site=NA) {
 
   n_states <- dim(rate.matrix)[1]
   clin_dx_late_state <- n_states
@@ -203,16 +215,22 @@ get.obs.data.individual <- function(ID, rate.matrix, emission.matrix,
   screen_early_state <- 2
   screen_late_state <- 3
 
-  ################
+
   pre_clin_early_state <- n_states - 3
   pre_clin_late_state <- n_states -2
-#####################
 
-  #set random seed based on ID
 #  set.seed(ID)
+if(!is.na(cancer_site)){
+  # set random seed based on ID and cancer site
+  the_seed <- make_ctmc_seed(ID, cancer_site)
+  cat("SLURM_ARRAY_TASK_ID =", Sys.getenv("SLURM_ARRAY_TASK_ID"),
+      "| ID =", ID,
+      "| cancer_site =", cancer_site,
+      "| seed =", the_seed, "\n")
+  set.seed(the_seed)
+}
 
-
-
+#%%%%%%%%%%%%%
 
   # Simulate CTMC trajectory for individual
   trajectory <- sim.ctmc(rate.matrix = rate.matrix, start.state = start.state,

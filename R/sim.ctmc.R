@@ -1,3 +1,4 @@
+# Test
 ########################################################################################
 #Author: Jane Lange
 #This function simulates from a time-homogeneous CTMC

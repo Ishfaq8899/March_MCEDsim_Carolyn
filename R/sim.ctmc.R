@@ -174,7 +174,7 @@ make_ctmc_seed <- function(ID, cancer_site) {
     stop("Unknown cancer_site: ", cancer_site)
   }
 
-  as.integer(ID * 100 + site_index)
+  as.integer(ID * 1e6 + site_index)
 }
 
 #############################################################################################################

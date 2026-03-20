@@ -22,9 +22,12 @@ get_filtered_rates <- function(the_omsts, the_lmsts, all_meta_data, all_rates, t
     cancer_site = the_cancer_sites
   )
 
+ # browser()
   the_indices <- all_meta_data %>%
-    semi_join(target_combos, by = c("OMST", "LMST", "cancer_site")) %>%
-    pull(index)
+  semi_join(target_combos, by = c("OMST", "LMST", "cancer_site")) %>%
+  select(index)
+
+#  pull(index)
 
 
 

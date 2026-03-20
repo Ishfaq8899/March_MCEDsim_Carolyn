@@ -24,6 +24,8 @@ get_filtered_rates <- function(the_omsts, the_lmsts, all_meta_data, all_rates, t
   the_indices <- matched_data %>%
     select(index)
 
+#  browser()
+
   if(length(the_indices$index) > 1){
     rates_list <- purrr::array_branch(all_rates[,,unlist(the_indices)], 3)
   } else {
@@ -33,11 +35,10 @@ get_filtered_rates <- function(the_omsts, the_lmsts, all_meta_data, all_rates, t
   cancer_sites <- matched_data %>%
     distinct(index, cancer_site) %>%
     arrange(index) %>%
-    select(cancer_site)   # use select, NOT pull
+    select(cancer_site)
 
   return(list(rates_list = rates_list, cancer_sites = cancer_sites$cancer_site))
 }
-##########################################
 
 ####### Old function #####################
 # get_filtered_rates <- function(the_omsts, the_lmsts, all_meta_data, all_rates, the_cancer_sites) {

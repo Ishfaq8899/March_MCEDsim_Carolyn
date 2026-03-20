@@ -150,6 +150,7 @@ sim_MCED_parallel_universe_before_CRC <- function(cancer_sites,
   sites_male = rates_list_male$cancer_sites
   rates_list_male = rates_list_male$rates_list
 
+
   # Extract rate matrices matrices based on OMST and LMST specs (Female)
   rates_list_female = get_filtered_rates(the_omsts = OMST_vec, the_lmsts = LMST_vec,
                                          all_meta_data = all_meta_data_female,

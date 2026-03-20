@@ -220,15 +220,15 @@ get.obs.data.individual <- function(ID, rate.matrix, emission.matrix,
   pre_clin_late_state <- n_states -2
 
 #  set.seed(ID)
-if(!is.na(cancer_site)){
+#if(!is.na(cancer_site)){
   # set random seed based on ID and cancer site
-  the_seed <- make_ctmc_seed(ID, cancer_site)
-  cat("SLURM_ARRAY_TASK_ID =", Sys.getenv("SLURM_ARRAY_TASK_ID"),
-      "| ID =", ID,
-      "| cancer_site =", cancer_site,
-      "| seed =", the_seed, "\n")
-  set.seed(the_seed)
-}
+#  the_seed <- make_ctmc_seed(ID, cancer_site)
+#  cat("SLURM_ARRAY_TASK_ID =", Sys.getenv("SLURM_ARRAY_TASK_ID"),
+#      "| ID =", ID,
+#      "| cancer_site =", cancer_site,
+#      "| seed =", the_seed, "\n")
+#  set.seed(the_seed)
+#}
 
 #%%%%%%%%%%%%%
 

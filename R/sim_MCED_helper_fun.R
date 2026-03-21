@@ -10,12 +10,12 @@
 #' @export
 #' @import purrr
 #' @import dplyr
-get_filtered_rates <- function(the_omsts, the_lmsts, all_meta_data, all_rates, the_cancer_sites) {
+get_filtered_rates <- function(the_omsts, the_lmsts, all_meta_data, all_rates, the_cancer_site) {
 
   target_combos <- tibble(
     OMST = the_omsts,
     LMST = the_lmsts,
-    cancer_site = the_cancer_sites
+    cancer_site = the_cancer_site
   )
 
   the_indices <- all_meta_data %>%

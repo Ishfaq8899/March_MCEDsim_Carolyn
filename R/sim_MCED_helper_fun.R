@@ -18,21 +18,20 @@ get_filtered_rates <- function(the_omsts, the_lmsts, all_meta_data, all_rates, t
     cancer_site = the_cancer_sites
   )
 
-  matched_data <- all_meta_data %>%
-    semi_join(target_combos, by = c("OMST", "LMST", "cancer_site"))
-
-  the_indices <- matched_data %>%
+  the_indices <- all_meta_data %>%
+    semi_join(target_combos, by = c("OMST", "LMST", "cancer_site")) %>%
     select(index)
-
-#  browser()
 
   if(length(the_indices$index) > 1){
     rates_list <- purrr::array_branch(all_rates[,,unlist(the_indices)], 3)
-  } else {
+  } else if(length(the_indices$index) == 1){
     rates_list <- list(all_rates[,,unlist(the_indices)])
+  } else {
+    rates_list <- list()
   }
 
-  cancer_sites <- matched_data %>%
+  cancer_sites <- all_meta_data %>%
+    semi_join(target_combos, by = c("OMST", "LMST", "cancer_site")) %>%
     distinct(index, cancer_site) %>%
     arrange(index) %>%
     select(cancer_site)
@@ -43,44 +42,19 @@ get_filtered_rates <- function(the_omsts, the_lmsts, all_meta_data, all_rates, t
 ####### Old function #####################
 # get_filtered_rates <- function(the_omsts, the_lmsts, all_meta_data, all_rates, the_cancer_sites) {
 
-#   the_indices <- all_meta_data %>%
-#   filter(OMST %in% the_omsts, LMST %in% the_lmsts, cancer_site %in% the_cancer_sites) %>%
-#    select("index")
-
-#  target_combos <- tibble(
-#    OMST = the_omsts,
-#    LMST = the_lmsts,
-#    cancer_site = the_cancer_sites
-#  )
-
-#  the_indices <- all_meta_data %>%
-#  semi_join(target_combos, by = c("OMST", "LMST", "cancer_site")) %>%
-#  select(index)
-
-#  pull(index)
-
+# the_indices <- all_meta_data %>%
+#  filter(OMST %in% the_omsts, LMST %in% the_lmsts, cancer_site %in% the_cancer_sites)
+#    %>% select("index")"
 
 #  if(length(the_indices$index)>1){
 #  rates_list <- purrr::array_branch(all_rates[,,unlist(the_indices)],3)
 #  }else{
 #    rates_list <- list(all_rates[,,unlist(the_indices)])
-
 #  }
-
 
 #  cancer_sites <- all_meta_data %>%
 #    filter(OMST %in% the_omsts, LMST %in% the_lmsts, cancer_site %in% the_cancer_sites) %>%
 #    select("cancer_site")
-
-#  cancer_sites <- matched_data %>% distinct(index, cancer_site) %>%
-#    arrange(index) %>% pull(cancer_site)
-
-#  target_combos
-#  the_indices
-#  length(the_indices$index)
-#  unlist(the_indices)
-
-#  cancer_sites
 
 #  return(list(rates_list = rates_list, cancer_sites = cancer_sites$cancer_site))
 #}

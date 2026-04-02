@@ -10,54 +10,57 @@
 #' @export
 #' @import purrr
 #' @import dplyr
-get_filtered_rates <- function(the_omsts, the_lmsts, all_meta_data, all_rates, the_cancer_site) {
-
-  target_combos <- tibble(
-    OMST = the_omsts,
-    LMST = the_lmsts,
-    cancer_site = the_cancer_site
-  )
-
-  the_indices <- all_meta_data %>%
-    semi_join(target_combos, by = c("OMST", "LMST", "cancer_site")) %>%
-    select(index)
-
-  if(length(the_indices$index) > 1){
-    rates_list <- purrr::array_branch(all_rates[,,unlist(the_indices)], 3)
-  } else if(length(the_indices$index) == 1){
-    rates_list <- list(all_rates[,,unlist(the_indices)])
-  } else {
-    rates_list <- list()
-  }
-
-  cancer_sites <- all_meta_data %>%
-    semi_join(target_combos, by = c("OMST", "LMST", "cancer_site")) %>%
-    distinct(index, cancer_site) %>%
-    arrange(index) %>%
-    select(cancer_site)
-
-  return(list(rates_list = rates_list, cancer_sites = cancer_sites$cancer_site))
-}
+ #  get_filtered_rates <- function(the_omsts, the_lmsts, all_meta_data, all_rates, the_cancer_sites) {
+ #
+ #    target_combos <- tibble(
+ #      OMST = the_omsts,
+ #      LMST = the_lmsts,
+ #      cancer_site = the_cancer_sites
+ #    )
+ #
+ #    the_indices <- all_meta_data %>%
+ #      semi_join(target_combos, by = c("OMST", "LMST", "cancer_site")) %>%
+ #      select(index)
+ #
+ #    if(length(the_indices$index) > 1){
+ #      rates_list <- purrr::array_branch(all_rates[,,unlist(the_indices)], 3)
+ #    } else if(length(the_indices$index) == 1){
+ #      rates_list <- list(all_rates[,,unlist(the_indices)])
+ #    } else {
+ #      rates_list <- list()
+ #    }
+ #
+ #    cancer_sites <- all_meta_data %>%
+ #      semi_join(target_combos, by = c("OMST", "LMST", "cancer_site")) %>%
+ #      distinct(index, cancer_site) %>%
+ #      arrange(index) %>%
+ #      select(cancer_site)
+ #
+ # #   browser()
+ #
+ #    return(list(rates_list = rates_list, cancer_sites = cancer_sites$cancer_site))
+ #  }
 
 ####### Old function #####################
-# get_filtered_rates <- function(the_omsts, the_lmsts, all_meta_data, all_rates, the_cancer_sites) {
+   get_filtered_rates <- function(the_omsts, the_lmsts, all_meta_data, all_rates, the_cancer_sites) {
+#
+   the_indices <- all_meta_data %>%
+    filter(OMST %in% the_omsts, LMST %in% the_lmsts, cancer_site %in% the_cancer_sites) %>% select("index")
 
-# the_indices <- all_meta_data %>%
-#  filter(OMST %in% the_omsts, LMST %in% the_lmsts, cancer_site %in% the_cancer_sites)
-#    %>% select("index")"
+   if(length(the_indices$index)>1){
+   rates_list <- purrr::array_branch(all_rates[,,unlist(the_indices)],3)
+    }else{
+     rates_list <- list(all_rates[,,unlist(the_indices)])
+    }
 
-#  if(length(the_indices$index)>1){
-#  rates_list <- purrr::array_branch(all_rates[,,unlist(the_indices)],3)
-#  }else{
-#    rates_list <- list(all_rates[,,unlist(the_indices)])
-#  }
+    cancer_sites <- all_meta_data %>%
+     filter(OMST %in% the_omsts, LMST %in% the_lmsts, cancer_site %in% the_cancer_sites) %>%
+      select("cancer_site")
 
-#  cancer_sites <- all_meta_data %>%
-#    filter(OMST %in% the_omsts, LMST %in% the_lmsts, cancer_site %in% the_cancer_sites) %>%
-#    select("cancer_site")
 
-#  return(list(rates_list = rates_list, cancer_sites = cancer_sites$cancer_site))
-#}
+   return(list(rates_list = rates_list, cancer_sites = cancer_sites$cancer_site))
+   }
+
 #########################################
 
 #' Get the initial natural history state based on the rate matrix and starting age, conditional on no clinical diagnoses before starting age.

@@ -145,7 +145,7 @@ sim_MCED_parallel_universe_before_CRC <- function(cancer_sites,
   # Extract rate matrices matrices based on OMST and LMST specs (Male)
   rates_list_male = get_filtered_rates(the_omsts = OMST_vec, the_lmsts = LMST_vec,
                                        all_meta_data = all_meta_data_male,
-                                       all_rates = all_rates_male, the_cancer_site = cancer_sites)
+                                       all_rates = all_rates_male, the_cancer_sites = cancer_sites)
 
   sites_male = rates_list_male$cancer_sites
   rates_list_male = rates_list_male$rates_list
@@ -154,16 +154,14 @@ sim_MCED_parallel_universe_before_CRC <- function(cancer_sites,
   # Extract rate matrices matrices based on OMST and LMST specs (Female)
   rates_list_female = get_filtered_rates(the_omsts = OMST_vec, the_lmsts = LMST_vec,
                                          all_meta_data = all_meta_data_female,
-                                         all_rates = all_rates_female, the_cancer_site = cancer_sites)
+                                         all_rates = all_rates_female, the_cancer_sites = cancer_sites)
   sites_female = rates_list_female$cancer_sites
   rates_list_female = rates_list_female$rates_list
-
 
   # ---- Extract Test Performance Parameters ----
   # Extract sensitivities and specificity based on selected cancer sites
   test_performance_male = test_performance_dataframe %>% filter(cancer_site %in% as.vector(sites_male))
   test_performance_female = test_performance_dataframe %>% filter(cancer_site %in% as.vector(sites_female))
-
 
   #Get the other-cause death tables for men and women
   other_cause_death_male=make_othercause_death_table(cdc_data=cdc_data,

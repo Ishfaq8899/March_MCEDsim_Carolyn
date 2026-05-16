@@ -284,27 +284,56 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
                             starting_age,
                             ending_age,
                             surv_param_table,
-                            pairs_table = NULL) {
+                            pairs_table = NULL,
+                            screen_interval=1,
+                            num_screens=30,
+                            fp_rate = 0.005) {
 
 
   # Pull merged MCED+CRC cohort
   combined_first_results=merged_CRC_MCED_results$joined_data
 
+# ################ verison 6 ######
+# Add eligibility column if it doesn't exist
+ #   if (!"clinical_diagnosis_time_eligibility" %in% names(combined_first_results)) {
+#     combined_first_results <- combined_first_results %>% mutate(clinical_diagnosis_time_eligibility = NA_real_)
+#   }
+
+   combined_first_results <- combined_first_results %>%
+     mutate(elig_time = ifelse(!is.na(clinical_diagnosis_time_eligibility), clinical_diagnosis_time_eligibility, clinical_diagnosis_time),
+
+            # if elig_time is still NA, set to Inf to keep in no_primary_cancer
+  elig_time = ifelse(is.na(elig_time), Inf, elig_time))
+
+   primary_cancer <- combined_first_results %>% filter(elig_time <= other_cause_death_time)
+
+    no_primary_cancer <- combined_first_results %>% filter(elig_time > other_cause_death_time) %>%
+      mutate(age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0, 150, by = 5)))
+# ################################
+#  primary_cancer <- combined_first_results %>%
+#    filter(!is.na(clinical_diagnosis_time) & clinical_diagnosis_time <= other_cause_death_time)
+
+#  no_primary_cancer <- combined_first_results %>%
+#    filter(is.na(clinical_diagnosis_time) | clinical_diagnosis_time > other_cause_death_time) %>%
+#    mutate(age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0, 150, by = 5)))
+
+### verison 4-5 ######
   # primary_cancer: Identify people who have clinical diagnosis of first cancer prior to other cause death
-  primary_cancer <- combined_first_results %>% filter(clinical_diagnosis_time<=other_cause_death_time)
+#   primary_cancer <- combined_first_results %>% filter(clinical_diagnosis_time<=other_cause_death_time)
 
   #Identify people who do not have clinical diagnosis of first cancer prior to other cause death.
   #These people are eligible for reassignment of additional cancers based on matching age at OC death.
   #Define other cause death strata based on five year age groups.
-  no_primary_cancer <- combined_first_results %>% filter(clinical_diagnosis_time>other_cause_death_time)%>%
-    mutate(age_OC_death_cat=cut(other_cause_death_time,breaks=seq(0,150,by=5)))
+#    no_primary_cancer <- combined_first_results %>% filter(clinical_diagnosis_time>other_cause_death_time)%>%
+#    mutate(age_OC_death_cat=cut(other_cause_death_time,breaks=seq(0,150,by=5)))
 
-
+##############
   # Build the "cancer pool" we want to assign to unaffected people:
   #  additional cancers (MCED additional cancers)
   #   excess cancers (MCED primaries displaced when CRC became primary)
   combined_additional_results <- bind_rows(merged_CRC_MCED_results$combined_additional_results,
                                            merged_CRC_MCED_results$excess_cancers)
+
 
   # Keep only cancers that could be clinically diagnosed before OC death
   # If there are any additional/excess cancers eligible for reassignment, proceed
@@ -315,6 +344,7 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
 
   # ensure pairs always exists for returning
   pairs <- pairs_table
+
 
   # If there are cancers to reassign, run matching & reassignment
   if(at_least_one_additional_result){
@@ -348,22 +378,25 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
     N_primary_before    <- nrow(primary_cancer)
     N_unaffected_before <- nrow(no_primary_cancer)
 
+
+ #  browser()
     #prepare cancers to reassign and unaffected individuals tables
 
     # cancers_to_reassign: all additional/excess cancers that need to be assigned to unaffected people
-   cancers_to_reassign <- combined_additional_results %>%
-     mutate(treat = 1L, row_id = paste0("T_", row_number()))
+   cancers_to_reassign <- combined_additional_results %>% mutate(treat = 1L, row_id = paste0("T_", row_number()))
 
+########### version 4-5
     # unaffected_people: individuals with no primary cancer (available for matching)
-    unaffected_people <- no_primary_cancer %>%
-      mutate(treat = 0L, row_id = paste0("C_", row_number()))
+  #  unaffected_people <- no_primary_cancer %>%
+  #  mutate(treat = 0L, row_id = paste0("C_", row_number()))
 
+########### version 6 ###########
+   unaffected_people <- no_primary_cancer %>% mutate(treat = 0L, row_id = paste0("C_", ID))
+
+
+    ############ #################
 #  Use actual ID instead of row_number()
-#    cancers_to_reassign <- combined_additional_results %>%
-#      mutate(treat = 1L, row_id = paste0("T_", ID))
-
-#    unaffected_people <- no_primary_cancer %>%
-#      mutate(treat = 0L, row_id = paste0("C_", ID))
+ #   cancers_to_reassign <- combined_additional_results %>% mutate(treat = 1L, row_id = paste0("T_", ID))
 
     # ================================
     # Reassignment using MatchIt
@@ -409,20 +442,19 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
     }
     if (nrow(pairs) > 0) {
 
-      # Reassign cancers to matched unaffected individuals
-      reassigned_cancers <- cancers_to_reassign %>%inner_join(pairs, by = c("row_id" = "cancer_id")) %>%
-        left_join(unaffected_people %>% select(row_id, ID_new = ID, sex_new = sex, death_time_new = other_cause_death_time),
-                  by = c("unaffected_id" = "row_id")) %>%
-        mutate( ID = ID_new,sex = sex_new, other_cause_death_time = death_time_new,
-                age_OC_death_cat = cut(death_time_new, breaks = seq(0,150,by=5))) %>%
-        select(-treat, -row_id, -unaffected_id, -ID_new, -sex_new, -death_time_new)
+# Reassign cancers to matched unaffected individuals
+       reassigned_cancers <- cancers_to_reassign %>%inner_join(pairs, by = c("row_id" = "cancer_id")) %>%
+          left_join(unaffected_people %>% select(row_id, ID_new = ID, sex_new = sex, death_time_new = other_cause_death_time),
+                    by = c("unaffected_id" = "row_id")) %>%
+          mutate( ID = ID_new,sex = sex_new, other_cause_death_time = death_time_new,
+                  age_OC_death_cat = cut(death_time_new, breaks = seq(0,150,by=5))) %>%
+          select(-treat, -row_id, -unaffected_id, -ID_new, -sex_new, -death_time_new)
 
-#  select(-treat, -row_id, -unaffected_id, -ID_new, -sex_new, -death_time_new,
-#         -cancer_original_ID, -unaffected_original_ID, -subclass)
 
       # Add reassigned cancers to the primary cancer dataset
       primary_cancer <- bind_rows(primary_cancer, reassigned_cancers)
 
+   #   browser()
       # Remove matched individuals from the pool of unaffected people
       unaffected_who_received_cancers <- unique(reassigned_cancers$ID)
       no_primary_cancer <- no_primary_cancer %>% filter(!(ID %in% unaffected_who_received_cancers))
@@ -441,13 +473,7 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
   # Final data with all cancers combined (first cancers and reassigned cancers)
   combined_results=bind_rows(primary_cancer,no_primary_cancer)
 
-  #rowser()
-
-  #  return(list( combined_results = combined_results, pairs = pairs))
-  #}
-
   end_time <- ending_age
-
 
   #Process data with other cause death as a censoring event
 
@@ -502,8 +528,43 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
                                                life_years_diff=death_age_screen-death_age_no_screen,
                                                overdiagnosis=ifelse(screen_dx_event=="screen_cancer_diagnosis"&clin_dx_event=="other_cause_death",1,0)
 
+    # Late-stage reduction: cancer would have been Late clinically but caught Early by screening
+#    late_stage_reduction = ifelse(clin_dx_event_stage == 2 & diagnosis_event_stage_screen_scenario == 1, 1, 0)
 
   )
+
+# test..
+#  combined_results <- combined_results %>% select(ID, onset_time) %>% sample_n(50)
+#  test_data <- test_data %>% mutate(n_false_positives = rbinom(n(), size = n_screens_before_onset, prob = fp_rate))
+
+# Calculate the number of screens each person received before cancer onset, capped at the maximum number of screens (num_screens).
+#   Uses floor() to count only fully completed screening intervals between starting_age and onset_time.
+ combined_results <- combined_results %>%
+   mutate(n_screens_before_onset = pmin(floor((onset_time - starting_age) / screen_interval), num_screens))
+
+#
+# n_screens_before_onset = pmin(floor((onset_time - starting_age) / screen_interval),
+#                               floor(num_screens/screen_interval))
+
+
+# Helper function to draw the number of false positives per person using binomial sampling.
+#   Each persons draw is seeded by their ID to ensure reproducibility across runs.
+
+ draw_false_positives <- function(ID, n_screens, fp_rate) {
+   if (is.na(n_screens) || is.na(ID)) return(NA)
+   set.seed(as.integer(ID))
+   rbinom(1, size = n_screens, prob = fp_rate)
+ }
+
+# Apply the false positive draw row-wise across all individuals.
+# Each person's number of false positives is drawn from Binomial(n_screens, fp_rate), where n_screens is their number of screens
+#  before onset and fp_rate is the per-screen false positive rate.
+ combined_results <- combined_results %>%
+   mutate(n_false_positives = mapply(draw_false_positives,
+                                     ID = ID,
+                                     n_screens = n_screens_before_onset,
+                                     fp_rate = fp_rate))
+
 
   return(list(combined_results = combined_results, pairs = pairs,no_match_counter = no_match_counter))
 }

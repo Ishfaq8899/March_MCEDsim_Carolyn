@@ -59,224 +59,211 @@
 #' @export
 build_crc_data_revised <- function(crc_spin_scenario, CRC_SPIN_dir) {
 
-  if (!crc_spin_scenario %in% c("control", "colonoscopy", "annual_fit",
-                                "mced_annual", "mced_biennial", "mced_triennial",
-                                "CRC_single_cancer_annual", "CRC_single_cancer_biennial", "CRC_single_cancer_triennial",
-                                "MCED_annual_no_CRC", "MCED_biennial_no_CRC", "MCED_triennial_no_CRC")) {
-    stop("Invalid crc_spin_scenario")
+    if (!crc_spin_scenario %in% c("control", "colonoscopy", "annual_fit",
+                                  "mced_annual", "mced_biennial", "mced_triennial",
+                                  "CRC_single_cancer_annual", "CRC_single_cancer_biennial", "CRC_single_cancer_triennial",
+                                  "MCED_annual_no_CRC", "MCED_biennial_no_CRC", "MCED_triennial_no_CRC")) {
+      stop("Invalid crc_spin_scenario")
+    }
+
+    if (crc_spin_scenario == "control") {
+      control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_1_person.rds"))
+
+      # CONTROL (no screening)
+      crc_data_revised <- control_data %>%
+        rename(start_age = age_at_index,
+               other_cause_death_time = age_death_oc,
+               clinical_diagnosis_time = age_clindet,
+               cancer_death_time_no_screen = age_death_crc_noscreen) %>%
+        mutate(sex = ifelse(fem == FALSE, "Male", "Female"),
+               clinical_diagnosis_stage = case_when(
+                 stage_clindet %in% c(1, 2) ~ "Early",
+                 stage_clindet %in% c(3, 4) ~ "Late",
+                 TRUE ~ NA_character_),
+               cancer_site = "Colorectal",
+               age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0, 150, 5))) %>%
+        select(sex, p_id, start_age, other_cause_death_time, clinical_diagnosis_time,
+               cancer_death_time_no_screen, clinical_diagnosis_stage, cancer_site,
+               age_OC_death_cat, age_death, n_preclin)
+
+      # =========================
+      # Colonoscopy (scenarioID 2)
+      # =========================
+    } else if (crc_spin_scenario == "colonoscopy") {
+      colonoscopy_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_2_person.rds"))
+
+
+      crc_data_revised <- colonoscopy_data %>%
+        rename(start_age = age_at_index,
+               other_cause_death_time = age_death_oc) %>%
+        mutate(sex = ifelse(fem == FALSE, "Male", "Female"),
+               clinical_diagnosis_time     = pmin(age_screendet, age_clindet, na.rm=TRUE),
+               cancer_death_time_no_screen = pmin(age_death_crc_screendet, age_death_crc_noscreen, na.rm=TRUE),
+               clinical_diagnosis_stage    = ifelse(stage_det %in% c(1,2), "Early", "Late"),
+               cancer_site      = "Colorectal",
+               age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0,150,5))) %>%
+        select(sex, p_id, start_age, other_cause_death_time, clinical_diagnosis_time,
+               cancer_death_time_no_screen, clinical_diagnosis_stage, cancer_site,
+               age_OC_death_cat, age_death, n_preclin)
+
+      #==================================================
+      # Scenario 3: Annual FIT screening (crc_spin_scenarioID = 3 )
+      #   - CRC-SPIN FIT strategy
+      #   - Screen diagnosis time = age_screendet
+      #   - Cancer death time = age_death_crc_screendet
+      #==================================================
+    } else if (crc_spin_scenario == "annual_fit") {
+      annual_fit_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_3_person.rds"))
+
+      crc_data_revised <- annual_fit_data %>%
+        rename(start_age = age_at_index,
+               other_cause_death_time = age_death_oc) %>%
+        mutate(sex = ifelse(fem == FALSE, "Male", "Female"),
+               clinical_diagnosis_time     = pmin(age_screendet, age_clindet, na.rm=TRUE),
+               cancer_death_time_no_screen = pmin(age_death_crc_screendet, age_death_crc_noscreen, na.rm=TRUE),
+               clinical_diagnosis_stage    = ifelse(stage_det %in% c(1,2), "Early", "Late"),
+               cancer_site      = "Colorectal",
+               age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0,150,5))) %>%
+        select(sex, p_id, start_age, other_cause_death_time, clinical_diagnosis_time,
+               cancer_death_time_no_screen, clinical_diagnosis_stage, cancer_site, age_OC_death_cat, age_death, n_preclin)
+
+      #==================================================
+      # Scenarios 4–6: MCED including CRC
+      #   mced_annual / mced_biennial / mced_triennial
+      #==================================================
+    } else if (crc_spin_scenario %in% c("mced_annual", "mced_biennial", "mced_triennial")) {
+
+      screen_id <- case_when(crc_spin_scenario == "mced_annual" ~ 4L,
+                             crc_spin_scenario == "mced_biennial" ~ 5L,
+                             TRUE ~ 6L)
+
+      control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_1_person.rds"))
+      screen_data  <- readRDS(file.path(CRC_SPIN_dir, paste0("scr_parmID_0_blockID_0_scenarioID_", screen_id, "_person.rds")))
+
+      control_data_revised <- control_data %>%
+        rename(start_age = age_at_index,
+               other_cause_death_time = age_death_oc,
+               clinical_diagnosis_time = age_clindet,
+               cancer_death_time_no_screen = age_death_crc_noscreen) %>%
+        mutate(sex = ifelse(fem == FALSE, "Male", "Female"),
+               clinical_diagnosis_stage = case_when(
+                 stage_clindet %in% c(1, 2) ~ "Early",
+                 stage_clindet %in% c(3, 4) ~ "Late",
+                 TRUE ~ NA_character_),
+               cancer_site = "Colorectal",
+               age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0, 150, 5))) %>%
+        select(sex, p_id, start_age, other_cause_death_time, clinical_diagnosis_time,
+               cancer_death_time_no_screen, clinical_diagnosis_stage, cancer_site,
+               age_OC_death_cat, age_death, n_preclin)
+
+      crc_data_revised <- screen_data %>%
+        rename(start_age = age_at_index,
+               other_cause_death_time = age_death_oc,
+               screen_diagnosis_time = age_screendet,
+               cancer_death_time_screen = age_death_crc_screendet) %>%
+        mutate(sex = ifelse(fem == FALSE, "Male", "Female"),
+               screen_diagnosis_stage = case_when(
+                 stage_screendet %in% c(1, 2) ~ "Early",
+                 stage_screendet %in% c(3, 4) ~ "Late",
+                 TRUE ~ NA_character_),
+               cancer_site = "Colorectal",
+               age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0, 150, 5))) %>%
+        select(sex, p_id, start_age, other_cause_death_time, screen_diagnosis_time,
+               cancer_death_time_screen, screen_diagnosis_stage, cancer_site,
+               age_OC_death_cat, age_death, n_preclin) %>%
+        left_join(select(control_data_revised, p_id, clinical_diagnosis_time,
+                         clinical_diagnosis_stage, cancer_death_time_no_screen), by = "p_id")
+
+      #==================================================
+      # Scenarios 7–9: CRC_single_cancer (annual/biennial/triennial)
+      #==================================================
+    } else if (crc_spin_scenario %in% c("CRC_single_cancer_annual", "CRC_single_cancer_biennial", "CRC_single_cancer_triennial")) {
+
+      screen_id <- case_when(crc_spin_scenario == "CRC_single_cancer_annual" ~ 4L,
+                             crc_spin_scenario == "CRC_single_cancer_biennial" ~ 5L,
+                             TRUE ~ 6L)
+
+      control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_1_person.rds"))
+      CRC_single_cancer_data <- readRDS(file.path(CRC_SPIN_dir, paste0("scr_parmID_0_blockID_0_scenarioID_", screen_id, "_person.rds")))
+
+      # version 6
+      crc_data_revised <- CRC_single_cancer_data %>%
+        rename(start_age = age_at_index,
+               other_cause_death_time = age_death_oc) %>%
+        mutate(sex = ifelse(fem == FALSE, "Male", "Female"),
+               clinical_diagnosis_time = pmin(age_clindet, age_screendet, na.rm = TRUE),
+               clinical_diagnosis_stage = case_when(
+                 stage_det %in% c(1, 2) ~ "Early",
+                 stage_det %in% c(3, 4) ~ "Late",
+                 TRUE ~ NA_character_),
+               cancer_death_time_no_screen = age_death_crc_noscreen,
+               cancer_site = "Colorectal",
+               age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0, 150, 5))) %>%
+        select(sex, p_id, start_age, other_cause_death_time,
+               clinical_diagnosis_time,
+               cancer_death_time_no_screen, clinical_diagnosis_stage,
+               cancer_site, age_OC_death_cat, age_death, n_preclin)
+
+
+
+      #==================================================
+      # Scenarios 10–12: MCED_no_CRC (annual/biennial/triennial)
+      #==================================================
+    } else if (crc_spin_scenario %in% c("MCED_annual_no_CRC", "MCED_biennial_no_CRC", "MCED_triennial_no_CRC")) {
+
+      screen_id <- case_when(crc_spin_scenario == "MCED_annual_no_CRC" ~ 4L,
+                             crc_spin_scenario == "MCED_biennial_no_CRC" ~ 5L,
+                             TRUE ~ 6L)
+
+      control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_1_person.rds"))
+      MCED_no_CRC_data <- readRDS(file.path(CRC_SPIN_dir, paste0("scr_parmID_0_blockID_0_scenarioID_", screen_id, "_person.rds")))
+
+      control_data_revised <- control_data %>%
+        rename(start_age = age_at_index,
+               other_cause_death_time = age_death_oc,
+               clinical_diagnosis_time = age_clindet,
+               cancer_death_time_no_screen = age_death_crc_noscreen) %>%
+        mutate(sex = ifelse(fem == FALSE, "Male", "Female"),
+               clinical_diagnosis_stage = case_when(
+                 stage_clindet %in% c(1, 2) ~ "Early",
+                 stage_clindet %in% c(3, 4) ~ "Late",
+                 TRUE ~ NA_character_),
+               cancer_site = "Colorectal",
+               age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0, 150, 5))) %>%
+        select(sex, p_id, start_age, other_cause_death_time, clinical_diagnosis_time,
+               cancer_death_time_no_screen, clinical_diagnosis_stage, cancer_site,
+               age_OC_death_cat, age_death, n_preclin)
+
+      crc_data_revised <- MCED_no_CRC_data %>%
+        rename(start_age = age_at_index,
+               other_cause_death_time = age_death_oc,
+               screen_diagnosis_time = age_clindet,
+               cancer_death_time_screen = age_death_crc_noscreen) %>%
+        mutate(sex = ifelse(fem == FALSE, "Male", "Female"),
+               screen_diagnosis_stage = case_when(
+                 stage_clindet %in% c(1, 2) ~ "Early",
+                 stage_clindet %in% c(3, 4) ~ "Late",
+                 TRUE ~ NA_character_),
+               cancer_site = "Colorectal",
+               age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0, 150, 5))) %>%
+        select(sex, p_id, start_age, other_cause_death_time, screen_diagnosis_time,
+               cancer_death_time_screen, screen_diagnosis_stage, cancer_site,
+               age_OC_death_cat, age_death, n_preclin) %>%
+        left_join(select(control_data_revised, p_id, clinical_diagnosis_time,
+                         clinical_diagnosis_stage, cancer_death_time_no_screen), by = "p_id")
+    }
+
+    final_control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_1_person.rds"))
+
+    final_control_data <- final_control_data %>% mutate(clinical_diagnosis_time_eligibility = age_clindet) %>%
+      select(p_id, clinical_diagnosis_time_eligibility)
+
+    crc_data_revised <- crc_data_revised %>% left_join(final_control_data, by ="p_id")
+
+
+    return(crc_data_revised)
   }
 
-  if (crc_spin_scenario == "control") {
-    control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_1_person.rds"))
-
-    # CONTROL (no screening)
-    crc_data_revised <- control_data %>%
-      rename(start_age = age_at_index,
-             other_cause_death_time      = age_death_oc,
-             clinical_diagnosis_time     = age_clindet,
-             cancer_death_time_no_screen = age_death_crc_noscreen) %>%
-      mutate(sex = ifelse(fem == FALSE, "Male", "Female"),
-             clinical_diagnosis_stage = ifelse(stage_clindet %in% c(1,2), "Early", "Late"),
-             cancer_site      = "Colorectal",
-             # age at other-cause death, binned by 5-year intervals
-             age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0,150,5))) %>%
-      select(sex, p_id, start_age, other_cause_death_time, clinical_diagnosis_time,
-             cancer_death_time_no_screen, clinical_diagnosis_stage, cancer_site, age_OC_death_cat, age_death, n_preclin)
-
-
-    # =========================
-    # Colonoscopy (scenarioID 2)
-    # =========================
-  } else if (crc_spin_scenario == "colonoscopy") {
-    colonoscopy_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_2_person.rds"))
-
-    crc_data_revised <- colonoscopy_data %>%
-      rename(start_age = age_at_index,
-             other_cause_death_time = age_death_oc) %>%
-      mutate(sex = ifelse(fem == FALSE, "Male", "Female"),
-             clinical_diagnosis_time     = pmin(age_screendet, age_clindet, na.rm=TRUE),
-             cancer_death_time_no_screen = pmin(age_death_crc_screendet, age_death_crc_noscreen, na.rm=TRUE),
-             clinical_diagnosis_stage    = ifelse(stage_det %in% c(1,2), "Early", "Late"),
-             cancer_site      = "Colorectal",
-             age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0,150,5))) %>%
-      select(sex, p_id, start_age, other_cause_death_time, clinical_diagnosis_time,
-             cancer_death_time_no_screen, clinical_diagnosis_stage, cancer_site,
-             age_OC_death_cat, age_death, n_preclin)
-
-    #==================================================
-    # Scenario 3: Annual FIT screening (crc_spin_scenarioID = 3 )
-    #   - CRC-SPIN FIT strategy
-    #   - Screen diagnosis time = age_screendet
-    #   - Cancer death time = age_death_crc_screendet
-    #==================================================
-  } else if (crc_spin_scenario == "annual_fit") {
-    annual_fit_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_3_person.rds"))
-
-    crc_data_revised <- annual_fit_data %>%
-      rename(start_age = age_at_index,
-             other_cause_death_time = age_death_oc) %>%
-      mutate(sex = ifelse(fem == FALSE, "Male", "Female"),
-             clinical_diagnosis_time     = pmin(age_screendet, age_clindet, na.rm=TRUE),
-             cancer_death_time_no_screen = pmin(age_death_crc_screendet, age_death_crc_noscreen, na.rm=TRUE),
-             clinical_diagnosis_stage    = ifelse(stage_det %in% c(1,2), "Early", "Late"),
-             cancer_site      = "Colorectal",
-             age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0,150,5))) %>%
-      select(sex, p_id, start_age, other_cause_death_time, clinical_diagnosis_time,
-             cancer_death_time_no_screen, clinical_diagnosis_stage, cancer_site, age_OC_death_cat, age_death, n_preclin)
-
-
-    #==================================================
-    # Scenarios 4–6: MCED including CRC
-    #   mced_annual / mced_biennial / mced_triennial
-    #   - For each person, we keep:
-    #       • control trajectory (no-screen CRC-SPIN)
-    #       • MCED screen trajectory (MCED+CRC-SPIN)
-    #   - Join on p_id so both paths are available
-    #==================================================
-    ############## Scenario 4: MCED + CRC, annual  ##############
-  } else if (crc_spin_scenario %in% c("mced_annual", "mced_biennial", "mced_triennial")) {
-
-    screen_id <- case_when(crc_spin_scenario == "mced_annual"    ~ 4L,
-                           crc_spin_scenario == "mced_biennial"  ~ 5L,
-                           TRUE ~ 6L)
-    control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_1_person.rds"))
-    screen_data  <- readRDS(file.path(CRC_SPIN_dir, paste0("scr_parmID_0_blockID_0_scenarioID_", screen_id, "_person.rds")))
-
-    # control group (no screening) – used for comparison
-    control_data_revised <- control_data %>%
-      rename(start_age = age_at_index,
-             other_cause_death_time      = age_death_oc,
-             clinical_diagnosis_time     = age_clindet,
-             cancer_death_time_no_screen = age_death_crc_noscreen) %>%
-      mutate(sex = ifelse(fem==FALSE,"Male","Female"),
-             clinical_diagnosis_stage = ifelse(stage_clindet %in% c(1,2),"Early","Late"),
-             cancer_site      = "Colorectal",
-             age_OC_death_cat = cut(other_cause_death_time, breaks=seq(0,150,5))) %>%
-      select(sex, p_id, start_age, other_cause_death_time, clinical_diagnosis_time,
-             cancer_death_time_no_screen, clinical_diagnosis_stage, cancer_site,
-             age_OC_death_cat, age_death, n_preclin)
-
-    # MCED annual screen trajectory, then join in control path by p_id
-    crc_data_revised <- screen_data %>%
-      rename(start_age                = age_at_index,
-             other_cause_death_time   = age_death_oc,
-             screen_diagnosis_time    = age_screendet,
-             cancer_death_time_screen = age_death_crc_screendet) %>%
-      mutate(sex = ifelse(fem==FALSE,"Male","Female"),
-             screen_diagnosis_stage = ifelse(stage_screendet %in% c(1,2),"Early","Late"),
-             cancer_site      = "Colorectal",
-             age_OC_death_cat = cut(other_cause_death_time, breaks=seq(0,150,5))) %>%
-      select(sex, p_id, start_age, other_cause_death_time, screen_diagnosis_time,
-             cancer_death_time_screen, screen_diagnosis_stage, cancer_site,
-             age_OC_death_cat, age_death, n_preclin) %>%
-      left_join(select(control_data_revised, p_id, clinical_diagnosis_time,
-                       clinical_diagnosis_stage, cancer_death_time_no_screen), by="p_id")
-
-
-    #==================================================
-    # Scenarios 7–9: CRC_single_cancer (annual/biennial/triennial)
-    #==================================================
-  } else if (crc_spin_scenario %in% c("CRC_single_cancer_annual", "CRC_single_cancer_biennial","CRC_single_cancer_triennial")) {
-
-    screen_id <- case_when(crc_spin_scenario == "CRC_single_cancer_annual"   ~ 4L,
-                           crc_spin_scenario == "CRC_single_cancer_biennial"  ~ 5L,
-                           TRUE ~ 6L)
-
-
-    # Load BOTH control and screen data
-    control_data           <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_1_person.rds"))
-    CRC_single_cancer_data <- readRDS(file.path(CRC_SPIN_dir,  paste0("scr_parmID_0_blockID_0_scenarioID_", screen_id, "_person.rds")))
-
-    # From control: get clinical detection time (no-screen baseline)
-    control_clinical <- control_data %>%
-      select(p_id, clinical_diagnosis_time  = age_clindet, clinical_diagnosis_stage = stage_clindet) %>%
-      mutate(clinical_diagnosis_stage = ifelse(clinical_diagnosis_stage %in% c(1,2), "Early", "Late"))
-
-    # From screen data: get screen death benefit
-    crc_data_revised <- CRC_single_cancer_data %>%
-      rename(start_age = age_at_index,
-             other_cause_death_time = age_death_oc) %>%
-      mutate(sex = ifelse(fem == FALSE, "Male", "Female"),
-             cancer_death_time_no_screen = pmin(age_death_crc_screendet, age_death_crc_noscreen, na.rm=TRUE),
-             cancer_site      = "Colorectal",
-             age_OC_death_cat = cut(other_cause_death_time, breaks=seq(0,150,5))) %>%
-      # Join clinical detection from control
-      left_join(control_clinical, by="p_id") %>%
-      select(sex, p_id, start_age, other_cause_death_time, clinical_diagnosis_time,
-             cancer_death_time_no_screen, clinical_diagnosis_stage, cancer_site,
-             age_OC_death_cat, age_death, n_preclin)
-
-    #%%%%%% Old
-    #   crc_data_revised <- CRC_single_cancer_data %>%
-    #      rename(start_age = age_at_index,
-    #             other_cause_death_time = age_death_oc)%>%
-    #      mutate(sex = ifelse(fem == FALSE, "Male", "Female"),
-    #              clinical_diagnosis_time =  pmin( age_screendet, age_clindet, na.rm = TRUE),
-    #             cancer_death_time_no_screen = pmin(age_death_crc_screendet, age_death_crc_noscreen, na.rm = TRUE),
-    #              clinical_diagnosis_stage = ifelse(stage_det %in% c(1, 2), "Early", "Late"),
-    #             cancer_site = "Colorectal",
-    #             age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0, 150, 5))) %>%
-    #      select(sex, p_id, start_age, other_cause_death_time, clinical_diagnosis_time,
-    #             cancer_death_time_no_screen, clinical_diagnosis_stage, cancer_site, age_OC_death_cat, age_death, n_preclin)
-
-
-    #==================================================
-    # Scenarios 10–12: MCED_no_CRC (annual/biennial/triennial)
-    #  Interpretation:
-    #   • MCED is used to detect NON-CRC cancers.
-
-    # Implementation:
-    #   1) control_data_revised
-    #         - clinical_diagnosis_time      = age_clindet
-    #         - cancer_death_time_no_screen  = age_death_crc_noscreen
-    #  2) MCED_no_CRC_data
-    #             screen_diagnosis_time     = age_clindet
-    #             cancer_death_time_screen  = age_death_crc_noscreen
-    # 3) We left_join() the MCED path with the control path by p_id so
-    #          that both sets of CRC variables are available to downstream code.
-    #==================================================
-  } else if (crc_spin_scenario %in% c("MCED_annual_no_CRC", "MCED_biennial_no_CRC", "MCED_triennial_no_CRC")) {
-
-    screen_id <- case_when(crc_spin_scenario == "MCED_annual_no_CRC"   ~ 4L,
-                           crc_spin_scenario == "MCED_biennial_no_CRC"  ~ 5L,
-                           TRUE ~ 6L)
-
-    control_data            <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_1_person.rds"))
-    MCED_annual_no_CRC_data <- readRDS(file.path(CRC_SPIN_dir, paste0("scr_parmID_0_blockID_0_scenarioID_", screen_id, "_person.rds")))
-
-    # control path
-    control_data_revised <- control_data %>%
-      rename(start_age = age_at_index,
-             other_cause_death_time      = age_death_oc,
-             clinical_diagnosis_time     = age_clindet,
-             cancer_death_time_no_screen = age_death_crc_noscreen) %>%
-      mutate(sex = ifelse(fem==FALSE,"Male","Female"),
-             clinical_diagnosis_stage = ifelse(stage_clindet %in% c(1,2),"Early","Late"),
-             cancer_site      = "Colorectal",
-             age_OC_death_cat = cut(other_cause_death_time, breaks=seq(0,150,5))) %>%
-      select(sex, p_id, start_age, other_cause_death_time, clinical_diagnosis_time,
-             cancer_death_time_no_screen, clinical_diagnosis_stage, cancer_site,
-             age_OC_death_cat, age_death, n_preclin)
-
-    # MCED annual for non-CRC cancers
-    crc_data_revised <- MCED_annual_no_CRC_data %>%
-      rename(start_age                = age_at_index,
-             other_cause_death_time   = age_death_oc,
-             screen_diagnosis_time    = age_clindet,
-             cancer_death_time_screen = age_death_crc_noscreen) %>%
-      mutate(sex = ifelse(fem==FALSE,"Male","Female"),
-             screen_diagnosis_stage = ifelse(stage_clindet %in% c(1,2),"Early","Late"),
-             cancer_site      = "Colorectal",
-             age_OC_death_cat = cut(other_cause_death_time, breaks=seq(0,150,5))) %>%
-      select(sex, p_id, start_age, other_cause_death_time, screen_diagnosis_time,
-             cancer_death_time_screen, screen_diagnosis_stage, cancer_site,
-             age_OC_death_cat, age_death, n_preclin) %>%
-      left_join(select(control_data_revised, p_id, clinical_diagnosis_time,
-                       clinical_diagnosis_stage, cancer_death_time_no_screen), by="p_id")
-  }
-
-  return(crc_data_revised)
-}
 
 # ==============================================================
 #' Merge CRC-SPIN and MCED simulation outputs for a specified scenario
@@ -363,7 +350,7 @@ build_crc_data_revised <- function(crc_spin_scenario, CRC_SPIN_dir) {
 #'
 #' @export
 process_mced_crc_data <- function(scenario_name, mced_data_dir, crc_data_path,
-                                  window_type="short_window") {
+                                  window_type="OMST_1_LMST_0.5_100") {
 
 #%%%%%%%%
   # Map window type to base file index
@@ -376,21 +363,27 @@ process_mced_crc_data <- function(scenario_name, mced_data_dir, crc_data_path,
 #%%%%
 
   # Map window type to base file index
-  window_base <- switch(window_type,
-                        "short_window"              = 0L,
-                        "long_early_window"         = 3L,
-                        "long_early_late_window"    = 6L,
-                        "Litrature_LMST_0.5_sen_100" = 9L,
-                        "Litrature_LMST_0.5_sen_50"  = 12L,
-                        stop("Invalid window_type: ", window_type)
-  )
+  window_map <- c(OMST_1_LMST_0.5_100 = 0L,
+                  OMST_1_LMST_0.5_50  = 3L,
+                  OMST_2_LMST_1_100   = 6L,
+                  OMST_2_LMST_1_50    = 9L,
+                  OMST_2_LMST_0.5_100 = 12L,
+                  OMST_2_LMST_0.5_50  = 15L,
+                  Litrature_100   = 18L,
+                  Litrature_50    = 21L
+                  )
+
+  window_base <- unname(window_map[window_type])
+
+  if (is.na(window_base)) {
+    stop("Invalid window_type: ", window_type)
+  }
 
   # Pick which MCED results file to load based on scenario name
-  # for short_window, it will select mced_scenario_1/2/3_combined_results.Rdata,
-  # for long_early_window, it will select mced_scenario_4/5/6_combined_results.Rdata,
-  # for long_early_late_window, it will select mced_scenario_7/8/9_combined_results.Rdata,
-  # for Litrature_LMST_0.5_sen_100, it will select mced_scenario_10/11/12_combined_results.Rdata,
-  # for Litrature_LMST_0.5_sen_50, it will select mced_scenario_13/14/15_combined_results.Rdata,
+  # Each window_type corresponds to a block of 3 MCED files:
+  # annual    -> window_base + 1
+  # biennial  -> window_base + 2
+  # triennial -> window_base + 3
 
   if (scenario_name %in% c("mced_biennial", "MCED_biennial_no_CRC", "CRC_single_cancer_biennial")) {
     mced_id <- window_base + 2L
@@ -434,24 +427,47 @@ process_mced_crc_data <- function(scenario_name, mced_data_dir, crc_data_path,
     # Get CRC data from crc_list
     CRC_data <- crc_list[[scenario_name]]
 
-    # Load processed CRC data
+
+######## version 6 ####################
     CRC_data <- CRC_data %>% mutate(fem = ifelse(sex == "Female", TRUE, FALSE)) %>%
-      select(c("fem","sex","p_id","start_age","other_cause_death_time","clinical_diagnosis_time",
-               "cancer_death_time_no_screen","clinical_diagnosis_stage","cancer_site","n_preclin","age_death"))
+      select(c("fem","sex","p_id","start_age","other_cause_death_time",
+                      "clinical_diagnosis_time",
+                      "clinical_diagnosis_time_eligibility",
+                      "cancer_death_time_no_screen","clinical_diagnosis_stage",
+                      "cancer_site","n_preclin","age_death"))
 
-
-    # Sort by sex and set new ids in both datasets
-    CRC_data               <- CRC_data %>% arrange(p_id, sex) %>% mutate(new_ID = seq(1, nrow(CRC_data)))
+    CRC_data <- CRC_data %>% arrange(p_id, sex) %>% mutate(new_ID = seq(1, nrow(CRC_data)))
     combined_first_results <- combined_first_results %>% arrange(ID, sex) %>% mutate(new_ID = seq(1, nrow(combined_first_results)))
 
-    # Join datasets by new id
-    # Note: variable names ending in .x are from MCEDsim .y are from CRC-spin
     joined_data <- combined_first_results %>%
-      left_join(select(CRC_data, c("fem","sex","p_id","new_ID","other_cause_death_time",
-                                   "clinical_diagnosis_time","cancer_death_time_no_screen",
-                                   "clinical_diagnosis_stage","cancer_site","n_preclin","age_death")),
+      left_join(select(CRC_data, any_of(c("fem","sex","p_id","new_ID",
+                                          "other_cause_death_time",
+                                          "clinical_diagnosis_time",
+                                          "clinical_diagnosis_time_eligibility",
+                                          "cancer_death_time_no_screen",
+                                          "clinical_diagnosis_stage",
+                                          "cancer_site","n_preclin","age_death"))),
                 by = c("new_ID" = "new_ID"))
 
+# ######## version 4-5 ################
+#     # Load processed CRC data
+#     CRC_data <- CRC_data %>% mutate(fem = ifelse(sex == "Female", TRUE, FALSE)) %>%
+#       select(c("fem","sex","p_id","start_age","other_cause_death_time","clinical_diagnosis_time",
+#                "cancer_death_time_no_screen","clinical_diagnosis_stage","cancer_site","n_preclin","age_death"))
+#
+#
+#     # Sort by sex and set new ids in both datasets
+#     CRC_data               <- CRC_data %>% arrange(p_id, sex) %>% mutate(new_ID = seq(1, nrow(CRC_data)))
+#     combined_first_results <- combined_first_results %>% arrange(ID, sex) %>% mutate(new_ID = seq(1, nrow(combined_first_results)))
+#
+#     # Join datasets by new id
+#     # Note: variable names ending in .x are from MCEDsim .y are from CRC-spin
+#     joined_data <- combined_first_results %>%
+#       left_join(select(CRC_data, c("fem","sex","p_id","new_ID","other_cause_death_time",
+#                                    "clinical_diagnosis_time","cancer_death_time_no_screen",
+#                                    "clinical_diagnosis_stage","cancer_site","n_preclin","age_death")),
+#                 by = c("new_ID" = "new_ID"))
+############################################
 
 
     #If sex allocations are not aligned, remove individuals with mismatched sex in joined data--may also have to remove these people from combined additional cancers
@@ -474,24 +490,42 @@ process_mced_crc_data <- function(scenario_name, mced_data_dir, crc_data_path,
     #If individual has both CRC and one or more MCED cancers before OC death: move the MCED cancer to an additional cancer file
     #    joined_data <- joined_data %>% mutate(MCED_and_CRC = ifelse(cancer_site == "Colorectal" & onset_time < other_cause_death_time, TRUE, FALSE))
 
+  #  browser()
 
     # Extract individuals with both MCED and CRC cancers to a separate dataset
     # These MCED cancers will be treated as "additional cancers" rather than primary
     excess_cancers <- subset(joined_data, MCED_and_CRC == TRUE) %>%
       mutate(clinical_diagnosis_time     = clinical_diagnosis_time.x,
              cancer_death_time_no_screen = cancer_death_time_no_screen.x,
-             clinical_diagnosis_stage    = clinical_diagnosis_stage.x) %>%
+             clinical_diagnosis_stage    = clinical_diagnosis_stage.x,
+             cancer_site = cancer_site.x) %>%
       select(-ends_with(".x"), -ends_with(".y")) %>%
       select(c(names(combined_first_results)))
 
-    # Set variables in joined_data depending on if they have CRC or MCED as their primary cancer
-    # If CRC is the primary cancer, use CRC values (.y), otherwise use MCED values (.x)
-    joined_data <- joined_data %>%
-      mutate(clinical_diagnosis_time     = ifelse(cancer_site == "Colorectal", clinical_diagnosis_time.y,     clinical_diagnosis_time.x),
-             cancer_death_time_no_screen = ifelse(cancer_site == "Colorectal", cancer_death_time_no_screen.y, cancer_death_time_no_screen.x),
-             clinical_diagnosis_stage    = ifelse(cancer_site == "Colorectal", clinical_diagnosis_stage.y,    clinical_diagnosis_stage.x)) %>%
-      select(-ends_with(".x"), -ends_with(".y"))
 
+
+###### version 4-5 ######
+# Set variables in joined_data depending on if they have CRC or MCED as their primary cancer
+# If CRC is the primary cancer, use CRC values (.y), otherwise use MCED values (.x)
+   joined_data <- joined_data %>%
+     mutate(clinical_diagnosis_time     = ifelse(cancer_site == "Colorectal", clinical_diagnosis_time.y,     clinical_diagnosis_time.x),
+            cancer_death_time_no_screen = ifelse(cancer_site == "Colorectal", cancer_death_time_no_screen.y, cancer_death_time_no_screen.x),
+            clinical_diagnosis_stage    = ifelse(cancer_site == "Colorectal", clinical_diagnosis_stage.y,    clinical_diagnosis_stage.x)) %>%
+     select(-ends_with(".x"), -ends_with(".y"))
+
+# ####### version 6 ######
+#     joined_data <- joined_data %>%
+#       mutate(clinical_diagnosis_time = ifelse(cancer_site == "Colorectal", clinical_diagnosis_time.y, clinical_diagnosis_time.x),
+#              cancer_death_time_no_screen = ifelse(cancer_site == "Colorectal", cancer_death_time_no_screen.y, cancer_death_time_no_screen.x),
+#              clinical_diagnosis_stage = ifelse(cancer_site == "Colorectal", clinical_diagnosis_stage.y,  clinical_diagnosis_stage.x),
+#
+#               # preserve eligibility column - use standalone column name
+#              clinical_diagnosis_time_eligibility = if ("clinical_diagnosis_time_eligibility" %in% names(.)) {
+#                clinical_diagnosis_time_eligibility
+#              } else {  NA_real_}) %>%
+#       select(-ends_with(".x"), -ends_with(".y"))
+
+##########################
 
     #============================================
     # Merge processed CRC-SPIN data with MCED data for scenarios with MCED screening for non-CRC cancers
@@ -514,7 +548,9 @@ process_mced_crc_data <- function(scenario_name, mced_data_dir, crc_data_path,
     CRC_data <- CRC_data %>% mutate(fem = ifelse(sex == "Female", TRUE, FALSE)) %>%
       select(c("fem","sex","p_id","start_age","other_cause_death_time","screen_diagnosis_time",
                "cancer_death_time_screen","screen_diagnosis_stage","cancer_site",
-               "clinical_diagnosis_time","clinical_diagnosis_stage","n_preclin","age_death"))
+               "clinical_diagnosis_time",
+               "clinical_diagnosis_time_eligibility",                                # added
+               "clinical_diagnosis_stage","n_preclin","age_death"))
 
     # sort by sex and set new ids in both datasets
     CRC_data               <- CRC_data %>% arrange(p_id, sex) %>% mutate(new_ID = seq(1, nrow(CRC_data)))
@@ -526,6 +562,7 @@ process_mced_crc_data <- function(scenario_name, mced_data_dir, crc_data_path,
       left_join(CRC_data %>% select(fem, sex, p_id, new_ID, other_cause_death_time,
                                     screen_diagnosis_time, cancer_death_time_screen, screen_diagnosis_stage,
                                     cancer_site, clinical_diagnosis_time, clinical_diagnosis_stage,
+                                    clinical_diagnosis_time_eligibility,                   # added
                                     n_preclin, age_death), by="new_ID")
 
     #If sex allocations are not aligned, remove individuals with mismatched sex in joined data--may also have to remove these people from combined additional cancers
@@ -538,6 +575,7 @@ process_mced_crc_data <- function(scenario_name, mced_data_dir, crc_data_path,
     # If individual has both pre-cursor lesions for CRC and one or more MCED cancers before age_death: move the MCED cancer to an additional cancer file
     joined_data <- joined_data %>% mutate(MCED_and_CRC = ifelse(cancer_site == "Colorectal" & onset_time < age_death, TRUE, FALSE))
 
+  #  browser()
 
     ######### Old version
     # If individual has a clinical CRC and no primary cancer before OC death, assign CRC to be the cancer site of primary cancer.
@@ -554,10 +592,12 @@ process_mced_crc_data <- function(scenario_name, mced_data_dir, crc_data_path,
              cancer_death_time_screen = cancer_death_time_screen.x,
              screen_diagnosis_stage   = screen_diagnosis_stage.x,
              clinical_diagnosis_time  = clinical_diagnosis_time.x,
-             clinical_diagnosis_stage = clinical_diagnosis_stage.x) %>%
+             clinical_diagnosis_stage = clinical_diagnosis_stage.x,
+             cancer_site = cancer_site.x) %>%
       select(-ends_with(".x"), -ends_with(".y")) %>%
       select(c(names(combined_first_results)))
 
+ #   browser()
 
     # Set variables in joined_data depending on if they have CRC or MCED as their primary cancer
     # If CRC is the primary cancer, use CRC values (.y), otherwise use MCED values (.x)

@@ -234,8 +234,6 @@ sim_MCED_parallel_universe_before_CRC <- function(cancer_sites,
   combined_additional_results=bind_rows(combined_additional_results_males,combined_additional_results_females)%>%
     mutate(start_age=starting_age,end_time=ending_age)
 
-  # browser()
-
   return(list(
     combined_additional_results=combined_additional_results,
     combined_first_results=combined_first_results
@@ -314,8 +312,6 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
   #  additional cancers (MCED additional cancers)
   #   excess cancers (MCED primaries displaced when CRC became primary)
   combined_additional_results <- bind_rows(merged_CRC_MCED_results$combined_additional_results, merged_CRC_MCED_results$excess_cancers)
-
-    browser()
 
   # Keep only cancers that could be clinically diagnosed before OC death
   # If there are any additional/excess cancers eligible for reassignment, proceed

@@ -450,26 +450,6 @@ process_mced_crc_data <- function(scenario_name, mced_data_dir, crc_data_path,
                                           "cancer_site","n_preclin","age_death"))),
                 by = c("new_ID" = "new_ID"))
 
-# ######## version 4-5 ################
-#     # Load processed CRC data
-#     CRC_data <- CRC_data %>% mutate(fem = ifelse(sex == "Female", TRUE, FALSE)) %>%
-#       select(c("fem","sex","p_id","start_age","other_cause_death_time","clinical_diagnosis_time",
-#                "cancer_death_time_no_screen","clinical_diagnosis_stage","cancer_site","n_preclin","age_death"))
-#
-#
-#     # Sort by sex and set new ids in both datasets
-#     CRC_data               <- CRC_data %>% arrange(p_id, sex) %>% mutate(new_ID = seq(1, nrow(CRC_data)))
-#     combined_first_results <- combined_first_results %>% arrange(ID, sex) %>% mutate(new_ID = seq(1, nrow(combined_first_results)))
-#
-#     # Join datasets by new id
-#     # Note: variable names ending in .x are from MCEDsim .y are from CRC-spin
-#     joined_data <- combined_first_results %>%
-#       left_join(select(CRC_data, c("fem","sex","p_id","new_ID","other_cause_death_time",
-#                                    "clinical_diagnosis_time","cancer_death_time_no_screen",
-#                                    "clinical_diagnosis_stage","cancer_site","n_preclin","age_death")),
-#                 by = c("new_ID" = "new_ID"))
-############################################
-
 
     #If sex allocations are not aligned, remove individuals with mismatched sex in joined data--may also have to remove these people from combined additional cancers
     #Also set other-cause death time to be CRC-SPIN OC death time
@@ -482,15 +462,6 @@ process_mced_crc_data <- function(scenario_name, mced_data_dir, crc_data_path,
 
     # If individual has both pre-cursor lesions for CRC and one or more MCED cancers before age_death: move the MCED cancer to an additional cancer file
     joined_data <- joined_data %>% mutate(MCED_and_CRC = ifelse(cancer_site == "Colorectal" & onset_time < age_death, TRUE, FALSE))
-
-    ####### Old
-    #If individual has CRC and no primary cancer before OC death, assign CRC to be the cancer site of primary cancer
-    #   joined_data <- joined_data %>% mutate(cancer_site = ifelse(!is.na(clinical_diagnosis_time.y) & clinical_diagnosis_time.y < other_cause_death_time,
-    #                                                               cancer_site.y, as.character(cancer_site.x)))
-
-    #If individual has both CRC and one or more MCED cancers before OC death: move the MCED cancer to an additional cancer file
-    #    joined_data <- joined_data %>% mutate(MCED_and_CRC = ifelse(cancer_site == "Colorectal" & onset_time < other_cause_death_time, TRUE, FALSE))
-
 
 
     # Extract individuals with both MCED and CRC cancers to a separate dataset
@@ -514,19 +485,6 @@ process_mced_crc_data <- function(scenario_name, mced_data_dir, crc_data_path,
             clinical_diagnosis_stage    = ifelse(cancer_site == "Colorectal", clinical_diagnosis_stage.y,    clinical_diagnosis_stage.x)) %>%
      select(-ends_with(".x"), -ends_with(".y"))
 
-# ####### version 6 ######
-#     joined_data <- joined_data %>%
-#       mutate(clinical_diagnosis_time = ifelse(cancer_site == "Colorectal", clinical_diagnosis_time.y, clinical_diagnosis_time.x),
-#              cancer_death_time_no_screen = ifelse(cancer_site == "Colorectal", cancer_death_time_no_screen.y, cancer_death_time_no_screen.x),
-#              clinical_diagnosis_stage = ifelse(cancer_site == "Colorectal", clinical_diagnosis_stage.y,  clinical_diagnosis_stage.x),
-#
-#               # preserve eligibility column - use standalone column name
-#              clinical_diagnosis_time_eligibility = if ("clinical_diagnosis_time_eligibility" %in% names(.)) {
-#                clinical_diagnosis_time_eligibility
-#              } else {  NA_real_}) %>%
-#       select(-ends_with(".x"), -ends_with(".y"))
-
-##########################
 
     #============================================
     # Merge processed CRC-SPIN data with MCED data for scenarios with MCED screening for non-CRC cancers
@@ -576,17 +534,7 @@ process_mced_crc_data <- function(scenario_name, mced_data_dir, crc_data_path,
     # If individual has both pre-cursor lesions for CRC and one or more MCED cancers before age_death: move the MCED cancer to an additional cancer file
     joined_data <- joined_data %>% mutate(MCED_and_CRC = ifelse(cancer_site == "Colorectal" & onset_time < age_death, TRUE, FALSE))
 
-  #  browser()
 
-    ######### Old version
-    # If individual has a clinical CRC and no primary cancer before OC death, assign CRC to be the cancer site of primary cancer.
-    #    joined_data <- joined_data %>% mutate(cancer_site = ifelse(!is.na(clinical_diagnosis_time.y) & clinical_diagnosis_time.y < other_cause_death_time,
-    #                                                              cancer_site.y, as.character(cancer_site.x)))
-    # If individual has both a clinical CRC and one or more MCED cancers before OC death: move the MCED cancer to an additional cancer file
-    #    joined_data <- joined_data %>% mutate(MCED_and_CRC = ifelse(cancer_site == "Colorectal" & onset_time < other_cause_death_time, TRUE, FALSE))
-
-
-    browser()
     ########
     # Extract individuals with both MCED and CRC cancers to a separate dataset
     # These MCED cancers will be treated as "additional cancers" rather than primary

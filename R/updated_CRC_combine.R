@@ -309,25 +309,7 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
 
     no_primary_cancer <- combined_first_results %>% filter(elig_time > other_cause_death_time) %>%
       mutate(age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0, 150, by = 5)))
-# ################################
-#  primary_cancer <- combined_first_results %>%
-#    filter(!is.na(clinical_diagnosis_time) & clinical_diagnosis_time <= other_cause_death_time)
 
-#  no_primary_cancer <- combined_first_results %>%
-#    filter(is.na(clinical_diagnosis_time) | clinical_diagnosis_time > other_cause_death_time) %>%
-#    mutate(age_OC_death_cat = cut(other_cause_death_time, breaks = seq(0, 150, by = 5)))
-
-### verison 4-5 ######
-  # primary_cancer: Identify people who have clinical diagnosis of first cancer prior to other cause death
-#   primary_cancer <- combined_first_results %>% filter(clinical_diagnosis_time<=other_cause_death_time)
-
-  #Identify people who do not have clinical diagnosis of first cancer prior to other cause death.
-  #These people are eligible for reassignment of additional cancers based on matching age at OC death.
-  #Define other cause death strata based on five year age groups.
-#    no_primary_cancer <- combined_first_results %>% filter(clinical_diagnosis_time>other_cause_death_time)%>%
-#    mutate(age_OC_death_cat=cut(other_cause_death_time,breaks=seq(0,150,by=5)))
-
-##############
   # Build the "cancer pool" we want to assign to unaffected people:
   #  additional cancers (MCED additional cancers)
   #   excess cancers (MCED primaries displaced when CRC became primary)

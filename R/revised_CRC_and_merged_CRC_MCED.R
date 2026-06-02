@@ -67,7 +67,7 @@ build_crc_data_revised <- function(crc_spin_scenario, CRC_SPIN_dir) {
     }
 
     if (crc_spin_scenario == "control") {
-      control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_4_scenarioID_1_person.rds"))
+      control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_1_person.rds"))
 
       # CONTROL (no screening)
       crc_data_revised <- control_data %>%
@@ -90,7 +90,7 @@ build_crc_data_revised <- function(crc_spin_scenario, CRC_SPIN_dir) {
       # Colonoscopy (scenarioID 2)
       # =========================
     } else if (crc_spin_scenario == "colonoscopy") {
-      colonoscopy_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_4_scenarioID_2_person.rds"))
+      colonoscopy_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_2_person.rds"))
 
 
       crc_data_revised <- colonoscopy_data %>%
@@ -113,7 +113,7 @@ build_crc_data_revised <- function(crc_spin_scenario, CRC_SPIN_dir) {
       #   - Cancer death time = age_death_crc_screendet
       #==================================================
     } else if (crc_spin_scenario == "annual_fit") {
-      annual_fit_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_4_scenarioID_3_person.rds"))
+      annual_fit_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_3_person.rds"))
 
       crc_data_revised <- annual_fit_data %>%
         rename(start_age = age_at_index,
@@ -137,8 +137,8 @@ build_crc_data_revised <- function(crc_spin_scenario, CRC_SPIN_dir) {
                              crc_spin_scenario == "mced_biennial" ~ 5L,
                              TRUE ~ 6L)
 
-      control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_4_scenarioID_1_person.rds"))
-      screen_data  <- readRDS(file.path(CRC_SPIN_dir, paste0("scr_parmID_0_blockID_4_scenarioID_", screen_id, "_person.rds")))
+      control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_1_person.rds"))
+      screen_data  <- readRDS(file.path(CRC_SPIN_dir, paste0("scr_parmID_0_blockID_0_scenarioID_", screen_id, "_person.rds")))
 
       control_data_revised <- control_data %>%
         rename(start_age = age_at_index,
@@ -183,8 +183,8 @@ build_crc_data_revised <- function(crc_spin_scenario, CRC_SPIN_dir) {
                              crc_spin_scenario == "CRC_single_cancer_biennial" ~ 5L,
                              TRUE ~ 6L)
 
-      control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_4_scenarioID_1_person.rds"))
-      CRC_single_cancer_data <- readRDS(file.path(CRC_SPIN_dir, paste0("scr_parmID_0_blockID_4_scenarioID_", screen_id, "_person.rds")))
+      control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_1_person.rds"))
+      CRC_single_cancer_data <- readRDS(file.path(CRC_SPIN_dir, paste0("scr_parmID_0_blockID_0_scenarioID_", screen_id, "_person.rds")))
 
       # version 6
       crc_data_revised <- CRC_single_cancer_data %>%
@@ -215,8 +215,8 @@ build_crc_data_revised <- function(crc_spin_scenario, CRC_SPIN_dir) {
                              crc_spin_scenario == "MCED_biennial_no_CRC" ~ 5L,
                              TRUE ~ 6L)
 
-      control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_4_scenarioID_1_person.rds"))
-      MCED_no_CRC_data <- readRDS(file.path(CRC_SPIN_dir, paste0("scr_parmID_0_blockID_4_scenarioID_", screen_id, "_person.rds")))
+      control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_1_person.rds"))
+      MCED_no_CRC_data <- readRDS(file.path(CRC_SPIN_dir, paste0("scr_parmID_0_blockID_0_scenarioID_", screen_id, "_person.rds")))
 
       control_data_revised <- control_data %>%
         rename(start_age = age_at_index,
@@ -254,7 +254,7 @@ build_crc_data_revised <- function(crc_spin_scenario, CRC_SPIN_dir) {
                          clinical_diagnosis_stage, cancer_death_time_no_screen), by = "p_id")
     }
 
-    final_control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_4_scenarioID_1_person.rds"))
+    final_control_data <- readRDS(file.path(CRC_SPIN_dir, "scr_parmID_0_blockID_0_scenarioID_1_person.rds"))
 
     final_control_data <- final_control_data %>% mutate(clinical_diagnosis_time_eligibility = age_clindet) %>%
       select(p_id, clinical_diagnosis_time_eligibility)

@@ -265,7 +265,6 @@ build_crc_data_revised <- function(crc_spin_scenario, CRC_SPIN_dir) {
     return(crc_data_revised)
   }
 
-
 # ==============================================================
 #' Merge CRC-SPIN and MCED simulation outputs for a specified scenario
 #'

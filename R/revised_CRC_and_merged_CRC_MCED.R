@@ -350,28 +350,14 @@ build_crc_data_revised <- function(crc_spin_scenario, CRC_SPIN_dir) {
 #'
 #' @export
 process_mced_crc_data <- function(scenario_name, mced_data_dir, crc_data_path,
-                                  window_type="OMST_1_LMST_0.5_100") {
-
-#%%%%%%%%
-  # Map window type to base file index
-#  window_base <- switch(window_type,
-#                        "short_window"           = 0L,
-#                        "long_early_window"      = 3L,
-#                        "long_early_late_window" = 6L,
-#                        stop("Invalid window_type:", window_type)
-#  )
-#%%%%
+                                  window_type="OMST_1_LMST_0.5") {
 
   # Map window type to base file index
-  window_map <- c(OMST_1_LMST_0.5_100 = 0L,
-                  OMST_1_LMST_0.5_50  = 3L,
-                  OMST_2_LMST_1_100   = 6L,
-                  OMST_2_LMST_1_50    = 9L,
-                  OMST_2_LMST_0.5_100 = 12L,
-                  OMST_2_LMST_0.5_50  = 15L,
-                  Litrature_100   = 18L,
-                  Litrature_50    = 21L
-                  )
+  window_map <- c(OMST_1_LMST_0.5 = 0L,
+                  OMST_2_LMST_1   = 3L,
+                  OMST_2_LMST_0.5 = 6L,
+                  Litrature_LMST_1   = 9L,
+                  Litrature_LMST_0.5 = 12L)
 
   window_base <- unname(window_map[window_type])
 

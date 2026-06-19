@@ -81,11 +81,20 @@ sim_cancer_death_param <- function(the_stage, the_cancer_site, the_sex,ID=NA,the
 
 #' @export
 sim_cancer_deaths_screen_no_screen<-function(clinical_diagnosis_time,clinical_diagnosis_stage,cancer_site,sex,ID,
-                                             screen_diagnosis_stage,surv_param_table){
+                                             screen_diagnosis_stage,surv_param_table, optimistic_surv_param_table=NULL){
 
   if(!is.na(ID)){
     set.seed(ID)
   }
+
+  if(!is.null(optimistic_surv_param_table)){
+    screen_surv_param_table=optimistic_surv_param_table
+  }else{
+    screen_surv_param_table=surv_param_table
+  }
+
+  browser()
+
   cancer_death_time_no_screen=clinical_diagnosis_time+sim_cancer_death_param(the_stage=clinical_diagnosis_stage,
                                                                                   the_cancer_site=cancer_site,
                                                                                   the_sex=sex,
@@ -101,7 +110,7 @@ cancer_death_time_screen=ifelse((screen_diagnosis_stage!=clinical_diagnosis_stag
                                                                   the_cancer_site=cancer_site,
                                                                   the_sex=sex,
                                                                   the_model_type="Loglogistic",
-                                                                  param_table=surv_param_table,
+                                                                  param_table=screen_surv_param_table,
                                                                   ID=ID),
                                          cancer_death_time_no_screen)
 

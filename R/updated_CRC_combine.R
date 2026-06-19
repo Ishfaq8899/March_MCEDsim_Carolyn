@@ -124,6 +124,7 @@ sim_MCED_parallel_universe_before_CRC <- function(cancer_sites,
                                                   hmd_data,
                                                   MCED_cdc,
                                                   surv_param_table,
+                                                  optimistic_surv_param_table=NULL,
                                                   simulation_seed){
 
 
@@ -193,6 +194,8 @@ sim_MCED_parallel_universe_before_CRC <- function(cancer_sites,
                                               screen_interval=screen_interval,
                                               end_time=ending_age,
                                               surv_param_table=surv_param_table,
+                                              optimistic_surv_param_table=optimistic_surv_param_table,
+
                                               sex="Male",MCED_specificity=MCED_specificity),
                               SIMPLIFY = FALSE)
 
@@ -208,6 +211,7 @@ sim_MCED_parallel_universe_before_CRC <- function(cancer_sites,
                                                 screen_interval=screen_interval,
                                                 end_time=ending_age,
                                                 surv_param_table=surv_param_table,
+                                                optimistic_surv_param_table=optimistic_surv_param_table,
                                                 sex="Female",
                                                 MCED_specificity=MCED_specificity),
                                 SIMPLIFY = FALSE)
@@ -257,6 +261,7 @@ sim_MCED_parallel_universe_before_CRC <- function(cancer_sites,
 #' @param starting_age Numeric starting age for cohort
 #' @param ending_age Numeric ending age for simulation
 #' @param surv_param_table Data frame of cancer-specific survival parameters
+#' @param optimistic_surv_param_table Data frame of cancer-specific optimistic survival parameters
 #'
 #' @details
 #' The reassignment algorithm attempts to match each additional cancer to an individual
@@ -282,6 +287,7 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
                             starting_age,
                             ending_age,
                             surv_param_table,
+                            optimistic_surv_param_table=NULL,
                             pairs_table = NULL,
                             screen_interval=1,
                             num_screens=30,
@@ -328,6 +334,7 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
   if(at_least_one_additional_result){
 
 
+
     #   set.seed(12345)
     # Simulate cancer-specific deaths for additional cancers
     addtl_cancer_deaths=mapply(
@@ -338,7 +345,8 @@ combine_MCED_CRC<- function(merged_CRC_MCED_results,
       sex = combined_additional_results$sex,
       ID = combined_additional_results$ID,
       screen_diagnosis_stage = combined_additional_results$screen_diagnosis_stage,
-      MoreArgs = list(surv_param_table=surv_param_table),
+      MoreArgs = list(surv_param_table=surv_param_table,
+                      optimistic_surv_param_table=optimistic_surv_param_table),
       SIMPLIFY = F)
 
     # Join cancer-specific deaths with cancer diagnoses for additional cancers

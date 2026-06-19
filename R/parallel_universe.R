@@ -29,6 +29,8 @@
 #' @param end_time Ending time (age) of simulation.
 #' @param sex "Male" or "Female".
 #' @param surv_param_table Survival parameters table (for simulating cancer death).
+#' @param optimistic_surv_param_table Survival optimistic parameters table (for simulating cancer death).
+
 #' @export
 #'
 #' @return A data frame with the individual's first-cancer outcomes (onset, screen/clinical diagnosis times and stages),
@@ -70,7 +72,10 @@ sim_individual_MCED<-function( ID,
                                screen_interval,
                                end_time,
                                sex,
-                               surv_param_table){
+                               surv_param_table,
+                               optimistic_surv_param_table=NULL){
+
+
 
   set.seed(ID)
   # simulate time of other cause death
@@ -105,7 +110,6 @@ sim_individual_MCED<-function( ID,
   result$other_cause_death_time <- other_cause_death$time
   result$sex=sex
 
-  # browser()
   stored_result=result
   #-----------------------
   # Identify first cancer by onset time
@@ -117,10 +121,8 @@ sim_individual_MCED<-function( ID,
 
   if (sum(!is.na(result$onset_time)>=1)) {
 
-    first_cancer_row <- result %>%
-      filter(!is.na(onset_time)) %>%
-      # selects the single row with the earliest (smallest) onset_time.
-      slice_min(order_by = onset_time, n = 1, with_ties = FALSE)%>%mutate(is_first_cancer=TRUE)
+    # selects the single row with the earliest (smallest) onset_time.
+    first_cancer_row <- result %>%filter(!is.na(onset_time)) %>% slice_min(order_by = onset_time, n = 1, with_ties = FALSE)%>%mutate(is_first_cancer=TRUE)
 
     #Simulate time of death for first cancer without screening and with screening
     #if stage at clinical diagnosis is same as stage at screen diagnosis OR there is is no screen diagnosis, then cancer_death_time_screen=cancer_death_time_no_screen
@@ -129,6 +131,14 @@ sim_individual_MCED<-function( ID,
     #the_sex=sex,
     #the_model_type="Loglogistic",
     #param_table=surv_param_table)
+
+    if(!is.null(optimistic_surv_param_table)){
+      screen_surv_param_table=optimistic_surv_param_table
+    }else{
+      screen_surv_param_table=surv_param_table
+    }
+
+
 
     if(!is.na(first_cancer_row$clinical_diagnosis_stage)){
 
@@ -144,7 +154,7 @@ sim_individual_MCED<-function( ID,
                                                                         the_cancer_site=cancer_site,
                                                                         the_sex=sex,
                                                                         the_model_type="Loglogistic",
-                                                                        param_table=surv_param_table,
+                                                                        param_table=screen_surv_param_table,
                                                                         ID=ID),
                                                cancer_death_time_no_screen))
 

@@ -134,6 +134,9 @@ sim_individual_MCED<-function( ID,
 
     if(!is.null(optimistic_surv_param_table)){
       screen_surv_param_table=optimistic_surv_param_table
+
+      #  print("optimistic")
+
     }else{
       screen_surv_param_table=surv_param_table
     }
@@ -146,20 +149,49 @@ sim_individual_MCED<-function( ID,
                                                                                                                                 the_cancer_site=cancer_site,
                                                                                                                                 the_sex=sex,
                                                                                                                                 the_model_type="Loglogistic",
-                                                                                                                                param_table=surv_param_table,ID=ID))%>%
-        mutate(cancer_death_time_screen=ifelse((screen_diagnosis_stage!=clinical_diagnosis_stage&!is.na(screen_diagnosis_stage))&!
-                                                 is.na(clinical_diagnosis_stage),
-                                               clinical_diagnosis_time+
-                                                 sim_cancer_death_param(the_stage="Early",
-                                                                        the_cancer_site=cancer_site,
-                                                                        the_sex=sex,
-                                                                        the_model_type="Loglogistic",
-                                                                        param_table=screen_surv_param_table,
-                                                                        ID=ID),
-                                               cancer_death_time_no_screen))
+                                                                                                                                param_table=surv_param_table,ID=ID))
+
+
+      #for non-optimistic scenario, do what we have previously done
+      if(is.null(optimistic_surv_param_table)){
+        first_cancer_row <-first_cancer_row  %>%
+          mutate(cancer_death_time_screen=ifelse((screen_diagnosis_stage!=clinical_diagnosis_stage&!is.na(screen_diagnosis_stage))&!
+                                                   is.na(clinical_diagnosis_stage),
+                                                 clinical_diagnosis_time+
+                                                   sim_cancer_death_param(the_stage="Early",
+                                                                          the_cancer_site=cancer_site,
+                                                                          the_sex=sex,
+                                                                          the_model_type="Loglogistic",
+                                                                          param_table=screen_surv_param_table,
+                                                                          ID=ID),
+                                                 cancer_death_time_no_screen))
+
+      }else{ #optimistic scenario
+
+        #generate cancer death times for screen-diagnosed patients according to optimistic survival tables.
+        first_cancer_row <-first_cancer_row  %>%
+          mutate(cancer_death_time_screen=ifelse(!is.na(screen_diagnosis_stage)&!
+                                                   is.na(clinical_diagnosis_stage),
+                                                 clinical_diagnosis_time+
+                                                   sim_cancer_death_param(the_stage=screen_diagnosis_stage,
+                                                                          the_cancer_site=cancer_site,
+                                                                          the_sex=sex,
+                                                                          the_model_type="Loglogistic",
+                                                                          param_table=screen_surv_param_table,
+                                                                          ID=ID),
+                                                 cancer_death_time_no_screen))
 
 
 
+      }
+
+
+      #is the surv_param_table optimistic for screen-detected patients?
+      # if(!is.na(first_cancer_row$screen_diagnosis_stage)&!
+      #    is.na(first_cancer_row$clinical_diagnosis_stage)){
+      #   # browser()
+      #   print(table(screen_surv_param_table==optimistic_surv_param_table))
+      # }
 
     }
 
@@ -173,7 +205,7 @@ sim_individual_MCED<-function( ID,
 
   stored_result <- stored_result %>% filter(!cancer_site==result$cancer_site)
 
- # set.seed(ID)
+  # set.seed(ID)
   result<-result %>% mutate(FP_tot=rbinom(n(),size=total_no_canc_screens,prob=1-MCED_specificity))
 
   return(list(first_result=result,stored_result=stored_result))
@@ -404,7 +436,7 @@ sim_multiple_individuals_MCED_parallel_universe <- function(cancer_sites,
   #Join cancer-specific deaths with cancer diagnoses for additional cancers
   combined_additional_results=data.frame(do.call(rbind,addtl_cancer_deaths))%>%inner_join(combined_additional_results, by=c("ID","cancer_site"))
 
- #combine the CRC data with the additional cancers for reassignment.  CRC diagnoses that occur after other cause death do not
+  #combine the CRC data with the additional cancers for reassignment.  CRC diagnoses that occur after other cause death do not
   #need to be reassigned so these people are removed from combined_additional_results.
   combined_additional_results <- bind_rows(combined_additional_results, CRC_data)%>%
     mutate(age_OC_death_cat=cut(other_cause_death_time,breaks=seq(0,150,by=5)))%>%
